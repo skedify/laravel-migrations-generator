@@ -241,7 +241,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 		}
 
 		foreach ( $tables as $table ) {
-			$this->migrationName = $actionPrefix . $table .'_table';
+			$this->migrationName = $this->getMigrationNamePrefix() . $actionPrefix . $table .'_table';
 			$this->method = $method;
 			$this->table = $table;
 			$this->fields = $this->schemaGenerator->{$function}( $table );
@@ -278,7 +278,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 	{
 		return $this->datePrefix;
 	}
-
+    
     /**
      * Set the date prefix for the migration
      * 
@@ -308,6 +308,17 @@ class MigrateGenerateCommand extends GeneratorCommand {
         
         return ends_with($prefix, '_') ? $prefix : $prefix . '_';
     }
+    
+    /**
+     * Get the optional migration name prefix as a snaked_cased value, with a trailing underscore
+     *
+     * @return string
+     */
+    protected function getMigrationNamePrefix()
+    {
+        return $this->asPrefix($this->option('migrationNamePrefix'));
+    }
+
 	/**
 	 * Fetch the template data
 	 *
@@ -365,6 +376,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 			['ignore', 'i', InputOption::VALUE_OPTIONAL, 'A list of Tables you wish to ignore, separated by a comma: users,posts,comments' ],
 			['path', 'p', InputOption::VALUE_OPTIONAL, 'Where should the file be created?'],
 			['templatePath', 'tp', InputOption::VALUE_OPTIONAL, 'The location of the template for this generator'],
+			['migrationNamePrefix', 'mnp', InputOption::VALUE_OPTIONAL, 'An optional prefix for the migration files and class names'],
 			['defaultIndexNames', null, InputOption::VALUE_NONE, 'Don\'t use db index names for migrations'],
 			['defaultFKNames', null, InputOption::VALUE_NONE, 'Don\'t use db foreign key names for migrations'],
 		];
