@@ -171,11 +171,13 @@ class MigrateGenerateCommand extends GeneratorCommand {
 		}
 
 		$this->info( "Setting up Tables and Index Migrations" );
-		$this->datePrefix = date( 'Y_m_d_His' );
+		$this->setDatePrefix(date( 'Y_m_d_His' ));
 		$this->generate( 'create', $tables );
+		
 		$this->info( "\nSetting up Foreign Key Migrations\n" );
-		$this->datePrefix = date( 'Y_m_d_His', strtotime( '+1 second' ) );
+		$this->setDatePrefix( date('Y_m_d_His', strtotime( '+1 second' ) ));
 		$this->generate( 'foreign_keys', $tables );
+		
 		$this->info( "\nFinished!\n" );
 	}
 
@@ -229,24 +231,24 @@ class MigrateGenerateCommand extends GeneratorCommand {
 	{
 		if ( $method == 'create' ) {
 			$function = 'getFields';
-			$prefix = 'create';
+			$actionPrefix = $this->asPrefix('create');
 		} elseif ( $method = 'foreign_keys' ) {
 			$function = 'getForeignKeyConstraints';
-			$prefix = 'add_foreign_keys_to';
+			$actionPrefix = $this->asPrefix('add_foreign_keys_to');
 			$method = 'table';
 		} else {
 			throw new MethodNotFoundException( $method );
 		}
 
 		foreach ( $tables as $table ) {
-			$this->migrationName = $prefix .'_'. $table .'_table';
+			$this->migrationName = $this->getMigrationNamePrefix() . $actionPrefix . $table .'_table';
 			$this->method = $method;
 			$this->table = $table;
 			$this->fields = $this->schemaGenerator->{$function}( $table );
 			if ( $this->fields ) {
 				parent::fire();
 				if ( $this->log ) {
-					$file = $this->datePrefix . '_' . $this->migrationName;
+					$file = $this->getDatePrefix() . $this->migrationName;
 					$this->repository->log($file, $this->batch);
 				}
 			}
@@ -262,7 +264,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 	{
 		$path = $this->getPathByOptionOrConfig( 'path', 'migration_target_path' );
 		$migrationName = str_replace('/', '_', $this->migrationName);
-		$fileName = $this->getDatePrefix() . '_' . $migrationName . '.php';
+		$fileName = $this->getDatePrefix() . $migrationName . '.php';
 
 		return "{$path}/{$fileName}";
 	}
@@ -276,6 +278,46 @@ class MigrateGenerateCommand extends GeneratorCommand {
 	{
 		return $this->datePrefix;
 	}
+    
+    /**
+     * Set the date prefix for the migration
+     * 
+     * @param string $prefix
+     */
+	protected function setDatePrefix($prefix)
+    {
+        $this->datePrefix = $this->asPrefix($prefix);
+    }
+    
+    /**
+     * Apply the prefix conventions to a string (snake_cased with a trailing underscore)
+     *
+     * @param string|null $string
+     *
+     * @return string
+     */
+	protected function asPrefix($string) 
+    {
+        if (empty($string))
+        {
+            // Ensure optional/empty prefixes don't cause excessive separators
+            return '';
+        }
+        
+        $prefix = snake_case($string);
+        
+        return ends_with($prefix, '_') ? $prefix : $prefix . '_';
+    }
+    
+    /**
+     * Get the optional migration name prefix as a snaked_cased value, with a trailing underscore
+     *
+     * @return string
+     */
+    protected function getMigrationNamePrefix()
+    {
+        return $this->asPrefix($this->option('migrationNamePrefix'));
+    }
 
 	/**
 	 * Fetch the template data
@@ -334,6 +376,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 			['ignore', 'i', InputOption::VALUE_OPTIONAL, 'A list of Tables you wish to ignore, separated by a comma: users,posts,comments' ],
 			['path', 'p', InputOption::VALUE_OPTIONAL, 'Where should the file be created?'],
 			['templatePath', 'tp', InputOption::VALUE_OPTIONAL, 'The location of the template for this generator'],
+			['migrationNamePrefix', 'mnp', InputOption::VALUE_OPTIONAL, 'An optional prefix for the migration files and class names'],
 			['defaultIndexNames', null, InputOption::VALUE_NONE, 'Don\'t use db index names for migrations'],
 			['defaultFKNames', null, InputOption::VALUE_NONE, 'Don\'t use db foreign key names for migrations'],
 		];
