@@ -239,7 +239,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 
 		foreach ( $tables as $table ) {
 			$this->table = $table;
-			$this->migrationName = 'create_'. $this->table .'_table';
+			$this->migrationName = $this->getMigrationNamePrefix() . 'create_'. $this->table .'_table';
 			$this->fields = $this->schemaGenerator->getFields( $this->table );
 
 			$this->generate();
@@ -258,7 +258,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 
 		foreach ( $tables as $table ) {
 			$this->table = $table;
-			$this->migrationName = 'add_foreign_keys_to_'. $this->table .'_table';
+			$this->migrationName = $this->getMigrationNamePrefix() . 'add_foreign_keys_to_'. $this->table .'_table';
 			$this->fields = $this->schemaGenerator->getForeignKeyConstraints( $this->table );
 
 			$this->generate();
@@ -365,6 +365,7 @@ class MigrateGenerateCommand extends GeneratorCommand {
 			['ignore', 'i', InputOption::VALUE_OPTIONAL, 'A list of Tables you wish to ignore, separated by a comma: users,posts,comments' ],
 			['path', 'p', InputOption::VALUE_OPTIONAL, 'Where should the file be created?'],
 			['templatePath', 'tp', InputOption::VALUE_OPTIONAL, 'The location of the template for this generator'],
+			['migrationNamePrefix', 'mnp', InputOption::VALUE_OPTIONAL, 'An optional prefix for the migration files and class names'],
 			['defaultIndexNames', null, InputOption::VALUE_NONE, 'Don\'t use db index names for migrations'],
 			['defaultFKNames', null, InputOption::VALUE_NONE, 'Don\'t use db foreign key names for migrations'],
 		];
@@ -400,5 +401,35 @@ class MigrateGenerateCommand extends GeneratorCommand {
 
 		return $excludes;
 	}
+
+    /**
+     * Get the optional migration name prefix as a snaked_cased value, with a trailing underscore
+     *
+     * @return string
+     */
+    protected function getMigrationNamePrefix()
+    {
+        return $this->asPrefix($this->option('migrationNamePrefix'));
+    }
+
+	/**
+     * Apply the prefix conventions to a string (snake_cased with a trailing underscore)
+     *
+     * @param string|null $string
+     *
+     * @return string
+     */
+	protected function asPrefix($string) 
+    {
+        if (empty($string))
+        {
+            // Ensure optional/empty prefixes don't cause excessive separators
+            return '';
+        }
+        
+        $prefix = snake_case($string);
+        
+        return ends_with($prefix, '_') ? $prefix : $prefix . '_';
+    }
 
 }
